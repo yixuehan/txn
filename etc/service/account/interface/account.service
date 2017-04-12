@@ -1,0 +1,17 @@
+; 账户模块的配置信息
+
+thread
+{
+   num 4
+}
+
+network
+{
+   lengthByte 4
+   joinPort 54321 ;接入主服务的端口号
+}
+
+dataStruct
+{
+   ioDataStruct json
+}

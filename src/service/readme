@@ -1,0 +1,8 @@
+一、写子服务的相应功能时函数原型为 void (*)(shared_array<char> req_ptr, size_t req_byte) ;
+二、在实现文件中增加服务
+    1 先定义宏CLASSNAME 类名  及TYPENAME 模板名
+    2 ADDBEGIN
+      // 服务名对应的成员函数名
+      ADD( "chat", chat )
+      ADDEND
+三、定义一个全局对象

@@ -1,0 +1,1 @@
+-ggdb3 -L/home/developer/boost_1_63_0/lib/debug -L/home/desert/firstPro/lib/libgo/debug

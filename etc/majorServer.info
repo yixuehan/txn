@@ -1,0 +1,11 @@
+network
+{
+   ioServerPort 12345
+   childServerPort 54321
+   lengthByte 8
+}
+
+thread
+{
+   num 6
+}

@@ -1,0 +1,23 @@
+; 登录功能的配置文件
+
+serviceID
+{
+   type c
+   required y
+}
+userName
+{
+   type s
+   required y
+}
+password
+{
+   type s
+   required  y
+}
+age
+{
+   type n
+   required n
+}
+
