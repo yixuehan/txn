@@ -1,5 +1,4 @@
-export PROROOT=~/firstPro
-export BOOST_HOME=/home/developer/boost_1_63_0
+export BOOST_HOME=/home/developer/boost1640
 export BOOST_INCLUDEDIR=${BOOST_HOME}/include
 export BOOST_LIBRARYDIR=${BOOST_HOME}/lib/release
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${BOOST_HOME}/lib/release:${PROROOT}/lib
