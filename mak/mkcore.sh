@@ -46,6 +46,19 @@ make_func()
             make -f ${PROROOT}/mak/mkcore.mak ${cmd}
          fi
       done
+      if [[ $cmd =~ "release" ]]; then
+         preFix=${PROROOT}/bin/
+         if [ ${targetType} = "dynamic" ]; then
+            suffix=".so"
+            preFix=${PROROOT}/lib/lib
+         elif [ ${targetType} = "static" ]; then
+            suffix=".a"
+            preFix=${PROROOT}/lib/lib
+         fi
+         strip ${preFix}${target}${suffix}
+      fi
+      echo $cmd
+      echo ${cmds[$#-1]}
    done
 }
 

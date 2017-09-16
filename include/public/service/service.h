@@ -15,7 +15,7 @@
 
 #ifndef CLASSNAME
    #error "请先定义CLASSNAME为当前类名"
-#endif 
+#endif
 //
 #if defined(TYPENAME)
    #define ADDBEGIN template<> \
@@ -41,7 +41,7 @@ public:
    Service( const std::string &strClassName ) ;
    // 告诉主服务自己提供哪些服务
    void registerService( const std::string &) ;
-   void doService( boost::shared_array<char> pArray, 
+   void doService( boost::shared_array<char> pArray,
                             const boost::system::error_code &ec, size_t rByte) ;
    void run() ;
 protected:
@@ -59,11 +59,11 @@ Service *getApp() ;
    #define CONCATNAME(a) CONCATNAME1(a)
    void serviceRun()
    {
-      std::string strClassName = CONCATNAME(CLASSNAME) ; 
-      boost::algorithm::to_lower( strClassName ) ; 
-      getApp()->registerService(strClassName) ; 
-      getApp()->run() ; 
-   } 
+      std::string strClassName = CONCATNAME(CLASSNAME) ;
+      boost::algorithm::to_lower( strClassName ) ;
+      getApp()->registerService(strClassName) ;
+      getApp()->run() ;
+   }
 #endif
 
 #endif
