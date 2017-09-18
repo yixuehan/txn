@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <thread>
 // 主服务的构造
 template <typename T>
 MajorServer<T>::MajorServer()
@@ -14,34 +15,34 @@ MajorServer<T>::MajorServer()
 
 template <typename T>
 void MajorServer<T>::run()
-{   
-   boost::shared_ptr<tcp::socket> pSocket2( new tcp::socket(_ioServer) ) ; 
-   _pChildAccept->async_accept( *pSocket2, boost::bind(&MajorServer::doChildServiceAccept, this, pSocket2, _1) ) ; 
-   boost::shared_ptr<tcp::socket> pSocket1( new tcp::socket(_ioServer) ) ; 
-   _pIOAccept->async_accept( *pSocket1, boost::bind(&MajorServer::doClientAccept, this, pSocket1, _1) ) ; 
-   for ( int i = 0; i < getSetting()->get<int>( "thread.num" ) ; ++i ) { 
-       boost::thread( boost::bind(&boost::asio::io_service::run, boost::ref(_ioServer) ) ).detach() ;
-   }   
+{
+   boost::shared_ptr<tcp::socket> pSocket2( new tcp::socket(_ioServer) ) ;
+   _pChildAccept->async_accept( *pSocket2, boost::bind(&MajorServer::doChildServiceAccept, this, pSocket2, _1) ) ;
+   boost::shared_ptr<tcp::socket> pSocket1( new tcp::socket(_ioServer) ) ;
+   _pIOAccept->async_accept( *pSocket1, boost::bind(&MajorServer::doClientAccept, this, pSocket1, _1) ) ;
+   for ( int i = 0; i < getSetting()->get<int>( "thread.num" ) ; ++i ) {
+       std::thread([this]{_ioServer.run();}).detach() ;
+   }
    _ioServer.run() ;
-}   
+}
 
 // 接收到客户请求连接
 template <typename T>
-void MajorServer<T>::doClientAccept( boost::shared_ptr<tcp::socket> pSocket, const boost::system::error_code &ec ) 
-{ 
-   if ( !ec ) { 
+void MajorServer<T>::doClientAccept( boost::shared_ptr<tcp::socket> pSocket, const boost::system::error_code &ec )
+{
+   if ( !ec ) {
       // 接收
-      std::cout << "注册接收函数" << std::endl ; 
+      std::cout << "注册接收函数" << std::endl ;
       // 记录建立的连接
-      _setClientConnected.insert( pSocket ) ; 
-      async_receiveMsg( pSocket, boost::bind( &MajorServer::doClientRequestServer, this, pSocket, _1, _2, _3) ) ; 
-   } 
-   else { 
-      std::cout << "建立客户连接出错" << std::endl ; 
-   } 
-   boost::shared_ptr<tcp::socket> pSocket_t( new tcp::socket(_ioServer) ) ; 
-   std::cout << "等待新的连接" << std::endl ; 
-   _pIOAccept->async_accept( *pSocket_t, boost::bind(&MajorServer::doClientAccept, this, pSocket_t, _1) ) ; 
+      _setClientConnected.insert( pSocket ) ;
+      async_receiveMsg( pSocket, boost::bind( &MajorServer::doClientRequestServer, this, pSocket, _1, _2, _3) ) ;
+   }
+   else {
+      std::cout << "建立客户连接出错" << std::endl ;
+   }
+   boost::shared_ptr<tcp::socket> pSocket_t( new tcp::socket(_ioServer) ) ;
+   std::cout << "等待新的连接" << std::endl ;
+   _pIOAccept->async_accept( *pSocket_t, boost::bind(&MajorServer::doClientAccept, this, pSocket_t, _1) ) ;
 }
 
 // 接收到子服务接入
@@ -193,7 +194,7 @@ void MajorServer<T>::doRegisterService( boost::shared_ptr<tcp::socket> pSocket, 
                ++iterID ) {
             strID = iterID->second.get_value<std::string>() ;
             strFullID = strServiceName + "-" + strID ;
-            //std::cout << "fullName:" << strFullID << std::endl; 
+            //std::cout << "fullName:" << strFullID << std::endl;
             _mapRoute[strFullID].emplace_back( strFullID, _mapRoute[strFullID].size()+1, pSocket) ;
             _mapService[pSocket].push_back( strFullID ) ;
          }
@@ -256,39 +257,39 @@ void MajorServer<T>::doUnregisterService( boost::shared_ptr<tcp::socket> pSocket
 
 // 断开连接
 template <typename T>
-void MajorServer<T>::doDisconnect( boost::shared_ptr<tcp::socket> pSocket ) 
+void MajorServer<T>::doDisconnect( boost::shared_ptr<tcp::socket> pSocket )
 {
-   pSocket->close() ; 
-   if ( _setClientConnected.end() != _setClientConnected.find( pSocket) ) { 
-      std::cerr << "移除客户连接" << std::endl ; 
-      _setClientConnected.erase( pSocket) ; 
+   pSocket->close() ;
+   if ( _setClientConnected.end() != _setClientConnected.find( pSocket) ) {
+      std::cerr << "移除客户连接" << std::endl ;
+      _setClientConnected.erase( pSocket) ;
    }
-   else if ( _setServiceConnected.end() != _setServiceConnected.find( pSocket) ) { 
+   else if ( _setServiceConnected.end() != _setServiceConnected.find( pSocket) ) {
       std::cerr << "移除子服务连接" << std::endl ;
-      doUnregisterService( pSocket ) ; 
+      doUnregisterService( pSocket ) ;
    }
 }
 
 // 收到请求转发给子服务
 template <typename T>
-void MajorServer<T>::doAsyncTransRequest( boost::shared_ptr<tcp::socket> pSocketService, 
+void MajorServer<T>::doAsyncTransRequest( boost::shared_ptr<tcp::socket> pSocketService,
                           boost::shared_ptr<tcp::socket> pSocketClient,
                           std::string strInterfaceID,
                           boost::shared_array<char> pArray
-                        ) 
-{ 
-   async_sendMsg( pSocketService, pArray, 
-      [this, pSocketService, pSocketClient, strInterfaceID, pArray]( const boost::system::error_code &ec, size_t ) 
-          { 
-             if ( !ec ) { 
-                doAsyncServiceResponse( pSocketService, pSocketClient, strInterfaceID, pArray ) ; 
-             } 
-             else { 
+                        )
+{
+   async_sendMsg( pSocketService, pArray,
+      [this, pSocketService, pSocketClient, strInterfaceID, pArray]( const boost::system::error_code &ec, size_t )
+          {
+             if ( !ec ) {
+                doAsyncServiceResponse( pSocketService, pSocketClient, strInterfaceID, pArray ) ;
+             }
+             else {
                 // 断开当前子服务，尝试其它子服务
-                doDisconnect( pSocketService ) ; 
-                auto iter = _mapRoute.find( strInterfaceID ) ; 
-                if ( (_mapRoute.end() == iter) || (iter->second.size() == 0) ) { 
-                   std::cout << "子服务" << __LINE__ << std::endl; 
+                doDisconnect( pSocketService ) ;
+                auto iter = _mapRoute.find( strInterfaceID ) ;
+                if ( (_mapRoute.end() == iter) || (iter->second.size() == 0) ) {
+                   std::cout << "子服务" << __LINE__ << std::endl;
                 }
                 else {
                    std::cout << "尝试其它子服务" << std::endl ;
@@ -304,19 +305,19 @@ void MajorServer<T>::doAsyncServiceResponse( boost::shared_ptr<tcp::socket> pSoc
                                 boost::shared_ptr<tcp::socket> pSocketClient,
                                 std::string strInterfaceID,
                                 boost::shared_array<char> oriData_ptr)
-{ 
-   async_receiveMsg( pSocketService, 
-         [this, pSocketClient, pSocketService, strInterfaceID, oriData_ptr](boost::shared_array<char> pArray, 
-            const boost::system::error_code& ec, size_t ) 
-         { 
-            if ( !ec ) { 
-                 doAsyncResponse2Client( pSocketClient, pArray ) ; 
-                 lock_t lck( _mtxRoute ) ; 
-                 --(ServiceState::_mapLoad[pSocketService]) ; 
-              } 
-              else { 
+{
+   async_receiveMsg( pSocketService,
+         [this, pSocketClient, pSocketService, strInterfaceID, oriData_ptr](boost::shared_array<char> pArray,
+            const boost::system::error_code& ec, size_t )
+         {
+            if ( !ec ) {
+                 doAsyncResponse2Client( pSocketClient, pArray ) ;
+                 lock_t lck( _mtxRoute ) ;
+                 --(ServiceState::_mapLoad[pSocketService]) ;
+              }
+              else {
                 // 断开当前子服务，尝试其它子服务
-                doDisconnect( pSocketService ) ; 
+                doDisconnect( pSocketService ) ;
                 auto iter = _mapRoute.find( strInterfaceID ) ;
                 if ( (_mapRoute.end() == iter) || (iter->second.size() == 0) ) {
                    std::cout << "子服务断开" << __LINE__ << std::endl;
